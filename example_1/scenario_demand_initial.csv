@@ -1,0 +1,7 @@
+Status,Initial Number of Patients
+Discharged,0
+Patients waiting for New,150
+Patients waiting for Consultant Follow-Up Intervention,30
+Patients waiting for Consultant Follow-Up Non-Intervention,60
+Patients waiting for Nurse Follow-Up,40
+Patients waiting for Surgery,12

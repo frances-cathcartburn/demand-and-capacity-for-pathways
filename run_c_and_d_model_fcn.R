@@ -217,6 +217,13 @@ run_c_and_d_model <- function(wd = getwd()
   ## Basic Error Checks - Scenario #########################################
   ##########################################################################
   
+  
+  if ( sum(duplicated(statuses$status)) > 0 ) {
+    msg <- paste0("This status is duplicated in the status table: ",statuses$status[duplicated(statuses$status)])
+    print(msg)
+    errors <- c(errors,msg)
+  }
+  
   if (!prod(demand_initial$status %in% statuses$status)) {
     msg <- "Error - The demand_initial table contains at least one status that isn't in the statuses table!"
     print(msg)

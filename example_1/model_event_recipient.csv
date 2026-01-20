@@ -1,0 +1,7 @@
+Event,Recipient
+New Referral Received,N/A
+Fictional New,Patients waiting for New
+Fictional Consultant Follow-Up Intervention,Patients waiting for Consultant Follow-Up Intervention
+Fictional Consultant Follow-Up Non-Intervention,Patients waiting for Consultant Follow-Up Non-Intervention
+Fictional Nurse Follow-Up,Patients waiting for Nurse Follow-Up
+Surgery,Patients waiting for Surgery
