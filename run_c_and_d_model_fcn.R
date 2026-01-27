@@ -60,9 +60,13 @@ run_c_and_d_model <- function(wd = getwd()
   if (exists("event_group_temp")) {
     names(event_group_temp) <- c("event","eventgroup","priority")
   }
-  if (exists("pifu_percentages")) {
-    names(pifu_percentages) <- c("n_months","proportion")
+  if (!exists("pifu_percentages")) {
+    pifu_percentages <- data.frame(c(1:12),c(0.02,0.02,0.02,0.03,0.06,0.07,0.09,0.13,0.16,0.18,0.16,0.06))
   }
+  names(pifu_percentages) <- c("n_months","proportion")
+  ## Synthetic placeholder PIFU proportions are hardcoded but can be customised via an input file
+  ##don't have less than 3% in any category because otherwise numbers get too small
+  
   
   event_group            <- events[1]
   event_group$eventgroup <- events$event
@@ -96,7 +100,6 @@ run_c_and_d_model <- function(wd = getwd()
     rm(event_group_temp)
   }
   
-  
   ##########################################################################
   ## Basic Error Checks - Model ############################################
   ##########################################################################
@@ -108,6 +111,7 @@ run_c_and_d_model <- function(wd = getwd()
     ,event_recipient
     ,event_outcome
     ,event_group
+    ,pifu_percentages
     ,output_suffix
     )
   
@@ -151,27 +155,7 @@ run_c_and_d_model <- function(wd = getwd()
     ,capacity_temp
     ,output_suffix
   )
-  
-  ##########################################################################
-  ## Initialise PIFU Proportions ###########################################
-  ##########################################################################
-  ## Synthetic placeholder PIFU proportions are hardcoded
-  ## Can be customised via an input file
-  
-  ##don't have less than 3% in any category because otherwise numbers get too small
-  
-    if (!exists("pifu_percentages")) {
-    pifu_percentages <- data.frame(c(1:12),c(0.02,0.02,0.02,0.03,0.06,0.07,0.09,0.13,0.16,0.18,0.16,0.06))
-    names(pifu_percentages) <- c("n_months","proportion")
-  }  
-  
-  ##need to add the below to an errors fcn
-  errors <- c()
-  if ( sum(pifu_percentages$proportion) != 1 ) {
-    msg <- "Error - The PIFU distribution proportions don't add up to 1"
-    print(msg)
-    errors <- c(errors,msg)
-  }
+
   
   ##########################################################################
   ## Initialise a capacity dataframe #######################################

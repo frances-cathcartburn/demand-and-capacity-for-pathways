@@ -9,6 +9,7 @@ error_checks_model_config_files <- function(
     ,event_recipient
     ,event_outcome
     ,event_group
+    ,pifu_percentages
     ,output_suffix
   ) {
   
@@ -81,16 +82,13 @@ error_checks_model_config_files <- function(
   if(sum(is.na(event_group$priority)) > 0) {
     msg <- "Error - There is at least one event that has an event group but doesn't have a priority!"
     errors_model <- c(errors_model,msg)
+  } else if(prod(floor(event_group$priority) == event_group$priority) == 0) {
+    msg <- "Error - There is at least one non-integer priority in the event group table!"
+    errors_model <- c(errors_model,msg)
   }
   
   if (!(length(unique(event_group$eventgroup)) == length(unique(event_group$eventgroup[event_group$priority == 1])))) {
     msg <- "Error - There is at least one event group without a priority 1 event!"
-    errors_model <- c(errors_model,msg)
-  }
-  
-  
-  if(prod(floor(event_group$priority) == event_group$priority) == 0) {
-    msg <- "Error - There is at least one non-integer priority in the event group table!"
     errors_model <- c(errors_model,msg)
   }
   
@@ -101,7 +99,11 @@ error_checks_model_config_files <- function(
       errors_model <- c(errors_model,msg)
     }
   }
-
+  
+  if ( sum(pifu_percentages$proportion) != 1 ) {
+    msg <- "Error - The PIFU distribution proportions don't add up to 1"
+    errors_model <- c(errors_model,msg)
+  }
   
   if (length(errors_model)>=1){
     write.csv(errors_model,paste(wd,"/out/errors_model_",output_suffix,".csv",sep=""), row.names = FALSE)

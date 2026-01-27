@@ -10,8 +10,8 @@ run_c_and_d_model(model_subfolder = wd_subfolder)
 #run_c_and_d_model(model_subfolder = wd_subfolder)
 
 ##run code chunks without running the whole function
-#model_subfolder <- ""
-#scenario_subfolder<-""
-#wd = getwd()
-#run_c_and_d_model(model_subfolder = wd_subfolder)
+model_subfolder <- ""
+scenario_subfolder<-""
+wd = getwd()
+model_subfolder <- "example_1"
 
