@@ -1,0 +1,13 @@
+Event,Outcome,Likelihood
+Fictional New,Discharged,0.2
+Fictional New,Patients waiting for Consultant Follow-Up Intervention,0.2
+Fictional New,Patients waiting for Consultant Follow-Up Non-Intervention,0.5
+Fictional New,Patients waiting for Nurse Follow-Up,0.1
+Fictional Consultant Follow-Up Intervention,Patients waiting for Nurse Follow-Up,1
+Fictional Consultant Follow-Up Non-Intervention,Discharged,0.8
+Fictional Consultant Follow-Up Non-Intervention,Patients waiting for Surgery,0.2
+Fictional Nurse Follow-Up,Discharged,0.4
+Fictional Nurse Follow-Up,Patients waiting for Consultant Follow-Up Intervention,0.1
+Fictional Nurse Follow-Up,Patients waiting for Surgery,0.5
+Surgery,Discharged,1
+New Referral Received,Patients waiting for New,1
