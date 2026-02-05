@@ -132,7 +132,7 @@ error_checks_scenario_config_files <- function(
   }
   
   if (!prod(statuses$status %in% demand_initial$status)) {
-    msg <- "Error - The demand_initial table is missing at least one of the statuses from the statuses table!"
+    msg <- "Error - The demand_initial table is missing at least one of the statuses from the statuses table! The missing value has been set to zero."
     errors_scenario <- c(errors_scenario,msg)
   }
   

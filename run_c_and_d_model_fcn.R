@@ -161,6 +161,11 @@ run_c_and_d_model <- function(wd = getwd()
   ## Initialise a capacity dataframe #######################################
   ##########################################################################
   
+  #If some statuses weren't given an initial demand, set to zero
+  new_demand_vec       <- statuses$status[!(statuses$status %in% demand_initial$status)]
+  new_demand_df        <- data.frame(new_demand_vec,rep(0,length(new_demand_vec)))
+  names(new_demand_df) <- c("status","waiters")
+  demand_initial       <- rbind(demand_initial,new_demand_df)
   #if there are the same number of events as event groups, no fiddling needed
   #if there aren't the same number of events as event groups, initialise 
   #capacity columns where all values are set to zero, so that capacity can be dynamically shared later
