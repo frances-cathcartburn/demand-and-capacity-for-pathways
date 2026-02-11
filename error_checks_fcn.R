@@ -25,6 +25,11 @@ error_checks_model_config_files <- function(
     errors_model <- c(errors_model,msg)
   }
   
+  if ( sum(duplicated(event_recipient$event)) > 0 ) {
+    msg <- paste0("This event is duplicated in the event_recipient table: ",event_recipient$event[duplicated(event_recipient$event)])
+    errors_model <- c(errors_model,msg)
+  }
+  
   if (!("New Referral Received" %in% event_outcome$event)) { 
     msg <- "Error - The 'New Referral Received' event is missing from the event outcome table!"
     errors_model <- c(errors_model,msg)
