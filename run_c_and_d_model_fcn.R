@@ -1,9 +1,16 @@
-
+  # This pipeline will:
+  #   Load in configuration files (first for the model, then for the scenario)
+  #   Perform some error checks on the config data
+  #   Initialise dataframes for results
+  #   Generate results
+  #   Output results as CSVs
+  
 run_c_and_d_model <- function(wd = getwd()
                                        , model_subfolder = ""
                                        , scenario_subfolder = "") {
-  
+
   source(paste0(wd,"/forecast_fcns.R"),local=TRUE)
+  source(paste0(wd,"/data_loading_fcns.R"),local=TRUE)
   
   if (model_subfolder == ""){
     setwd(wd)
@@ -57,31 +64,21 @@ run_c_and_d_model <- function(wd = getwd()
   names(events)          <- c("event")
   names(event_recipient) <- c("event","recipient")
   names(event_outcome)   <- c("event","outcome","likelihood")
+  
   if (exists("event_group_temp")) {
     names(event_group_temp) <- c("event","eventgroup","priority")
+    event_group <- create_event_group(events, event_group_temp)
+  } else {
+    event_group <- create_event_group(events)
   }
+  
   if (!exists("pifu_percentages")) {
     pifu_percentages <- data.frame(c(1:12),c(0.02,0.02,0.02,0.03,0.06,0.07,0.09,0.13,0.16,0.18,0.16,0.06))
   }
   names(pifu_percentages) <- c("n_months","proportion")
   ## Synthetic placeholder PIFU proportions are hardcoded but can be customised via an input file
   ##don't have less than 3% in any category because otherwise numbers get too small
-  
-  
-  event_group            <- events[1]
-  event_group$eventgroup <- events$event
-  event_group$priority   <- rep(1,length(event_group[1]))
-  names(event_group)     <- c("event","eventgroup","priority")
-  if (exists("event_group_temp")) {
-    for (e in events$event) {
-      if (e %in% event_group_temp$event && event_group_temp$eventgroup[event_group_temp$event == e] != "") {
-        event_group$eventgroup[event_group$event == e] <- event_group_temp$eventgroup[event_group_temp$event == e]
-        event_group$priority[event_group$event == e]   <- event_group_temp$priority[event_group_temp$event == e]
-      }
-    }
-    rm(e)
-  }
-  
+
   if (!("New Referral Received" %in% events$event)) { 
     events[nrow(events)+1,] <- c("New Referral Received")
   }
@@ -119,7 +116,6 @@ run_c_and_d_model <- function(wd = getwd()
   ## Load in source files - Scenario #######################################
   ##########################################################################
   
-  
   if (scenario_subfolder != ""){
     setwd(paste(wd,'/', model_subfolder,'/', scenario_subfolder, sep = ""))
   }
@@ -156,7 +152,6 @@ run_c_and_d_model <- function(wd = getwd()
     ,output_suffix
   )
 
-  
   ##########################################################################
   ## Initialise a capacity dataframe #######################################
   ##########################################################################
@@ -176,7 +171,6 @@ run_c_and_d_model <- function(wd = getwd()
   for (c in names(capacity_temp)[names(capacity_temp) != "date"]){
     capacity_temp[[c]] <- capacity_temp[[c]]*(1-dna_rate)
   }
-  
   
   if (length(events$event) == length(distinct_eventgroups)) {
     capacity <- capacity_temp
@@ -202,11 +196,6 @@ run_c_and_d_model <- function(wd = getwd()
     }
     rm(eg,ev,evs,col_name)
   }
-  
-  
-  ##rm(capacity_temp)
-  
-  
   
   ##########################################################################
   ## Set up starting situation #############################################
@@ -239,8 +228,6 @@ run_c_and_d_model <- function(wd = getwd()
   names(df_new_wait)            <- c("date",statuses$status_short_name)
   df_new_wait$date              <- capacity$date
   
-  
-  
   ##########################################################################
   ## Set up PIFU holding areas #############################################
   ##########################################################################
@@ -261,8 +248,6 @@ run_c_and_d_model <- function(wd = getwd()
   df_pifu_holding_pre        <- as.data.frame(matrix(0, ncol = m1_pifu+1, nrow = nrow(pifu_percentages)))
   names(df_pifu_holding_pre) <- c("date",statuses$status_short_name[statuses$status %in% pifu_statuses])
   df_pifu_holding_pre$date   <- paste("pre_",rev(pifu_percentages$n_months),sep='')
-  
-  
   
   ##########################################################################
   ## Put initial waiters into the results dataframe #############################################
@@ -315,11 +300,13 @@ run_c_and_d_model <- function(wd = getwd()
   ##########################################################################
   ## Execute model for as many months as we've got capacity and referrals ##
   ##########################################################################
-  #M<-1
+  
   for (M in c(1:nrow(capacity))) {
+    
     current_date <- capacity$date[M]
     
     generate_event_demand()
+    
     allocate_dynamic_capacity()
 
     generate_events_carried_out()
@@ -328,20 +315,11 @@ run_c_and_d_model <- function(wd = getwd()
     
     generate_new_waiters()
     
-    ##TOTAL WAITERS AT THE START OF NEXT MONTH
     if (M != nrow(capacity)) {
       generate_total_waiters_next_month()
     }
+    
   }
-  
-  ##########################################################################
-  ## Tidy up variables that we're not using again ##########################
-  ##########################################################################
-  
-  ##some of these variables don't always exist so trying to remove them causes errors
-  #rm(e,f,s,t,M,current_date,evv,fvv,eg,evs_p,lowest_priority,max_months,dat,p,priority_n,proportion,q,total_demand,used_capacity)
-  #rm(col_name_ev,col_name_evv,col_name_group,available_capacity_remaining,available_capacity_total)
-  #rm(recip,recip_short_name,recip_current_no,dem,cap,waiting_at_month_start,seen_this_month,ev_this_status_receives,ev_this_status_receives_short,evs,ev,ev_short,x,y,new_waits,s_pifu_percentages)
   
   ##########################################################################
   ## Put outputs somewhere useful ##########################################

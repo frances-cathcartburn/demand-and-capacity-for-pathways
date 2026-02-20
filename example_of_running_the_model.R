@@ -18,4 +18,3 @@ model_subfolder <- ""
 scenario_subfolder<-""
 wd = getwd()
 model_subfolder <- "example_1"
-
