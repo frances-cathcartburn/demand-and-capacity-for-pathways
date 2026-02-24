@@ -47,3 +47,17 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# local script
+example_of_running_the_model_for_pain.R
+
+# produced csv files
+*.csv
+!example_1/model_events.csv
+!example_1/model_statuses.csv
+!example_1/model_event_outcome.csv
+!example_1/model_event_recipient.csv
+!example_1/model_event_group.csv
+!example_1/scenario_capacity_and_demand_referrals.csv
+!example_1/scenario_demand_initial.csv
+!out/*_example_1.csv
