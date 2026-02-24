@@ -60,7 +60,10 @@ error_checks_model_config_files <- function(
     errors_model <- c(errors_model,msg)
   }
   
-  if (!(isTRUE(all.equal(prod(by(event_outcome$likelihood,event_outcome$event,sum)),1)))) {
+  if (class(event_outcome$likelihood) != "numeric"){
+    msg <- "Error - In the event outcomes file there is at least one likelihood that isn't a number!"
+    errors_model <- c(errors_model,msg)
+  } else if (!(isTRUE(all.equal(prod(by(event_outcome$likelihood,event_outcome$event,sum)),1)))) {
     msg <- "Error - In the event outcomes file there is at least one event where the likelihoods don't add up to 1!"
     errors_model <- c(errors_model,msg)
   }

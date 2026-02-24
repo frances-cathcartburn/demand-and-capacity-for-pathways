@@ -9,8 +9,17 @@ run_c_and_d_model <- function(wd = getwd()
                                        , model_subfolder = ""
                                        , scenario_subfolder = "") {
 
+  ##########################################################################
+  ## Load functions from source files ######################################
+  ##########################################################################
+  
+  source(paste0(wd,"/setup_fcns.R"),local=TRUE)
   source(paste0(wd,"/forecast_fcns.R"),local=TRUE)
   source(paste0(wd,"/data_loading_fcns.R"),local=TRUE)
+  
+  ##########################################################################
+  ## Set working directory #################################################
+  ##########################################################################
   
   if (model_subfolder == ""){
     setwd(wd)
@@ -19,21 +28,13 @@ run_c_and_d_model <- function(wd = getwd()
   }
   
   ##########################################################################
-  ## Define a useful place to put outputs ##################################
+  ## Define name of output files ###########################################
   ##########################################################################
   
-  dt_tm <- gsub(" ","_",gsub("-","",gsub(":","",substr(Sys.time(),1,19))))
-  
-  output_suffix <- if(model_subfolder == ""){
-    paste("", dt_tm,sep="")
-  } else if (scenario_subfolder == "") {
-    paste("", dt_tm,"_",model_subfolder,sep="")
-  } else {
-    paste("", dt_tm,"_",model_subfolder,"_",scenario_subfolder,sep="")
-  }
+  output_suffix <- generate_output_suffix()
   
   ##########################################################################
-  ## Load in source files - Model ##########################################
+  ## Load config files - Model #############################################
   ##########################################################################
   
   model_statuses_raw                        <- read.csv("model_statuses.csv")
@@ -47,37 +48,19 @@ run_c_and_d_model <- function(wd = getwd()
     model_pifu_percentages_raw <- read.csv("model_pifu_percentages.csv")
   }
   
+  ##########################################################################
+  ## Process data tables - Model - Mandatory files #########################
+  ##########################################################################  
   
-  #reformat model tables - I'll come back to this later ##make model_event_outcome_raw$likelihood into numeric if it isn't already
   statuses        <- model_statuses_raw
   events          <- model_events_raw
   event_recipient <- model_event_recipient_raw
   event_outcome   <- model_event_outcome_raw
-  if (exists("model_event_group_raw")) {
-    event_group_temp <- model_event_group_raw
-  }
-  if (exists("model_pifu_percentages_raw")) {
-    pifu_percentages <- model_pifu_percentages_raw
-  }
   
   names(statuses)        <- c("status","exit","rott")
   names(events)          <- c("event")
   names(event_recipient) <- c("event","recipient")
   names(event_outcome)   <- c("event","outcome","likelihood")
-  
-  if (exists("event_group_temp")) {
-    names(event_group_temp) <- c("event","eventgroup","priority")
-    event_group <- create_event_group(events, event_group_temp)
-  } else {
-    event_group <- create_event_group(events)
-  }
-  
-  if (!exists("pifu_percentages")) {
-    pifu_percentages <- data.frame(c(1:12),c(0.02,0.02,0.02,0.03,0.06,0.07,0.09,0.13,0.16,0.18,0.16,0.06))
-  }
-  names(pifu_percentages) <- c("n_months","proportion")
-  ## Synthetic placeholder PIFU proportions are hardcoded but can be customised via an input file
-  ##don't have less than 3% in any category because otherwise numbers get too small
 
   if (!("New Referral Received" %in% events$event)) { 
     events[nrow(events)+1,] <- c("New Referral Received")
@@ -85,20 +68,32 @@ run_c_and_d_model <- function(wd = getwd()
   
   events$event_short_name            <- make.names(events$event)
   statuses$status_short_name         <- make.names(statuses$status)
-  event_group$eventgroup_short_name  <- make.names(event_group$eventgroup)
-  
   exit_statuses <- statuses$status[tolower(statuses$exit) == "exit"]
   
-  distinct_eventgroups            <- unique(event_group$eventgroup)
+  ##########################################################################
+  ## Process data tables - Model - Optional files ##########################
+  ##########################################################################  
   
-  rm(model_statuses_raw, model_events_raw, model_event_recipient_raw, model_event_outcome_raw)
-  if (exists("event_group_temp")) {
-    rm(model_event_group_raw)
-    rm(event_group_temp)
+  #Event Groups
+  if (exists("model_event_group_raw")) {
+    event_group_temp <- model_event_group_raw
+    names(event_group_temp) <- c("event","eventgroup","priority")
+    event_group <- create_event_group(events, event_group_temp)
+  } else {
+    event_group <- create_event_group(events)
   }
+  event_group$eventgroup_short_name  <- make.names(event_group$eventgroup)
+  
+  #Pifu Percentages
+  if (exists("model_pifu_percentages_raw")) {
+    pifu_percentages <- model_pifu_percentages_raw
+  } else {
+    pifu_percentages <- data.frame(c(1:12),c(0.02,0.02,0.02,0.03,0.06,0.07,0.09,0.13,0.16,0.18,0.16,0.06))
+  }
+  names(pifu_percentages) <- c("n_months","proportion")
   
   ##########################################################################
-  ## Basic Error Checks - Model ############################################
+  ## Error Checks - Model Inputs ###########################################
   ##########################################################################
   
   error_checks_model_config_files(
@@ -113,7 +108,7 @@ run_c_and_d_model <- function(wd = getwd()
     )
   
   ##########################################################################
-  ## Load in source files - Scenario #######################################
+  ## Load config files - Scenario ##########################################
   ##########################################################################
   
   if (scenario_subfolder != ""){
@@ -122,8 +117,11 @@ run_c_and_d_model <- function(wd = getwd()
   
   scenario_input_demand_initial_raw         <- read.csv("scenario_demand_initial.csv")
   scenario_input_capacity_and_referrals_raw <- read.csv("scenario_capacity_and_demand_referrals.csv")
+
+  ##########################################################################
+  ## Process data tables - Scenario ########################################
+  ##########################################################################  
   
-  #reformat input tables -  I'll come back to this later to deal with errors if event names aren't correct
   demand_initial   <- scenario_input_demand_initial_raw
   demand_referrals <- scenario_input_capacity_and_referrals_raw[,c(1,2)]
   capacity_temp    <- scenario_input_capacity_and_referrals_raw[,c(1,3:length(scenario_input_capacity_and_referrals_raw))]
@@ -132,14 +130,12 @@ run_c_and_d_model <- function(wd = getwd()
   names(demand_referrals) <- c("date","new_referrals")
   names(capacity_temp)[1] <- "date"
   
-  if ( "PIFU activated" %in% event_group$eventgroup ) { ##THERE IS A PIFU EVENT)
+  if ( "PIFU activated" %in% event_group$eventgroup ) {
     capacity_temp$PIFU.activated <- rep(10000000,length(capacity_temp$date))
   }
   
-  rm(scenario_input_demand_initial_raw, scenario_input_capacity_and_referrals_raw) 
-  
   ##########################################################################
-  ## Basic Error Checks - Scenario #########################################
+  ## Error Checks - Scenario Inputs  #######################################
   ##########################################################################
   
   error_checks_scenario_config_files(
@@ -153,7 +149,7 @@ run_c_and_d_model <- function(wd = getwd()
   )
 
   ##########################################################################
-  ## Initialise a capacity dataframe #######################################
+  ## Apply DNA rate and initialise a capacity dataframe ####################
   ##########################################################################
   
   #If some statuses weren't given an initial demand, set to zero
@@ -161,44 +157,18 @@ run_c_and_d_model <- function(wd = getwd()
   new_demand_df        <- data.frame(new_demand_vec,rep(0,length(new_demand_vec)))
   names(new_demand_df) <- c("status","waiters")
   demand_initial       <- rbind(demand_initial,new_demand_df)
-  #if there are the same number of events as event groups, no fiddling needed
-  #if there aren't the same number of events as event groups, initialise 
-  #capacity columns where all values are set to zero, so that capacity can be dynamically shared later
-  #exception is PIFU - we don't limit the number of PIFUs that can be activated.
   
-  dna_rate <- 0.03
+  distinct_eventgroups <- unique(event_group$eventgroup)
+  dna_rate             <- 0.03
   
   for (c in names(capacity_temp)[names(capacity_temp) != "date"]){
     capacity_temp[[c]] <- capacity_temp[[c]]*(1-dna_rate)
   }
   
-  if (length(events$event) == length(distinct_eventgroups)) {
-    capacity <- capacity_temp
-  } else {
-    capacity <- capacity_temp[1]
-    for (eg in distinct_eventgroups[distinct_eventgroups != "New Referral Received"]) {
-      if (eg == "PIFU activated") {
-        ##effectively infinite capacity for PIFU
-        evs <- event_group$event[event_group$eventgroup == eg]
-        capacity_temp$Capacity.PIFU.activated <- rep(100000,length(capacity$date))
-        for (ev in evs) {
-          col_name <- paste("Capacity.",events$event_short_name[events$event == ev],sep='')
-          capacity[[col_name]] <- rep(0,length(capacity$date))
-        }
-      } else {
-        evs <- event_group$event[event_group$eventgroup == eg]
-        #initialise a column
-        for (ev in evs) {
-          col_name <- paste("Capacity.",events$event_short_name[events$event == ev],sep='')
-          capacity[[col_name]] <- rep(0,length(capacity$date))
-        }
-      }
-    }
-    rm(eg,ev,evs,col_name)
-  }
+  capacity <- generate_capacity()
   
   ##########################################################################
-  ## Set up starting situation #############################################
+  ## Define Parameters #####################################################
   ##########################################################################
   
   c <- nrow(capacity)  #number of months
@@ -206,7 +176,10 @@ run_c_and_d_model <- function(wd = getwd()
   m2 <- nrow(statuses) #number of statuses
   start_date <- capacity$date[1]
   
-  ####Initialise dataframes to fill with results
+  ##########################################################################
+  ## Set up initial state - Initialise results dataframes to be populated ##
+  ##########################################################################
+  
   ##Patients waiting at the start of month
   df_waiters                    <- as.data.frame(matrix(0, ncol = m2+1, nrow = c))
   names(df_waiters)             <- c("date",statuses$status_short_name)
@@ -229,74 +202,37 @@ run_c_and_d_model <- function(wd = getwd()
   df_new_wait$date              <- capacity$date
   
   ##########################################################################
-  ## Set up PIFU holding areas #############################################
+  ## Set up initial state - Initialise PIFU holding areas ##################
   ##########################################################################
   
-  m1_pifu                 <- length(event_group$event[event_group$eventgroup == "PIFU activated"])   #number of events
   pifu_statuses           <- event_recipient$recipient[event_recipient$event %in% event_group$event[event_group$eventgroup == "PIFU activated"]]
-  df_pifu_holding         <- as.data.frame(matrix(0, ncol = m1_pifu+1, nrow = c))
-  names(df_pifu_holding)  <- c("date",statuses$status_short_name[statuses$status %in% pifu_statuses])
-  df_pifu_holding$date    <- c(capacity$date)
+  
+  df_pifu_holding         <- generate_df_pifu_holding()
+  
   #add new columns to df_waiters to hold numbers of unactivated pifus
   for (ps in pifu_statuses) {
     pt <- statuses$status_short_name[statuses$status == ps]
     pt_u <- paste0(pt,".UnactivatedThisMonth")
     df_waiters[[pt_u]] <- rep(0,c)
   }
-  #rm(m1_pifu)
-  
-  df_pifu_holding_pre        <- as.data.frame(matrix(0, ncol = m1_pifu+1, nrow = nrow(pifu_percentages)))
-  names(df_pifu_holding_pre) <- c("date",statuses$status_short_name[statuses$status %in% pifu_statuses])
-  df_pifu_holding_pre$date   <- paste("pre_",rev(pifu_percentages$n_months),sep='')
+
+  df_pifu_holding_pre     <- generate_df_pifu_holding_pre()
   
   ##########################################################################
-  ## Put initial waiters into the results dataframe #############################################
+  ## Set up initial state - Put month 1 waiters into the results dataframes #
   ##########################################################################
   
-  #put initial waiters into the results dataframe
   for (s in statuses$status[!(statuses$status %in% pifu_statuses)]) {
     t <- statuses$status_short_name[statuses$status == s]
     df_waiters[[t]][df_waiters$date == start_date] <- demand_initial$waiters[demand_initial$status == s]
   }
-  
-  #initial PIFUs
-  for (s in pifu_statuses) {
-    open_pifus <- demand_initial$waiters[demand_initial$status == s]
-    open_pifus_monthly <- open_pifus/nrow(pifu_percentages)
-    t <- statuses$status_short_name[statuses$status == s]
-    #for each of the last X months' initialised PIFUS
-    for (i in (1:nrow(pifu_percentages))) {
-      s_pifu_percentages <- pifu_percentages
-      if (i == nrow(pifu_percentages)) {
-        s_pifu_percentages$date_activated <- capacity$date[1:i]
-      } else {
-        s_pifu_percentages$date_activated <- c(df_pifu_holding_pre$date[(i+1):nrow(df_pifu_holding_pre)],capacity$date[1:i])
-      }
-      s_pifu_percentages$number_activated <- pifu_percentages$proportion*open_pifus_monthly
-      #for each month that some activate before the start of our modelling period
-      if (i < nrow(pifu_percentages)) {
-        for (j in (1:(nrow(pifu_percentages)-i))) {
-          df_pifu_holding_pre[[t]][i+j] <- df_pifu_holding_pre[[t]][i+j] + s_pifu_percentages$number_activated[j]
-        }
-      }
-      #for each month that some activate after the start of our modelling period
-      for (j in ((nrow(pifu_percentages)-i+1):nrow(pifu_percentages))) {
-        df_pifu_holding[[t]][j-(nrow(pifu_percentages)-i)] <- df_pifu_holding[[t]][j-(nrow(pifu_percentages)-i)] + s_pifu_percentages$number_activated[j]
-      }
-    }
-    df_waiters[[t]][df_waiters$date == start_date] <- df_pifu_holding[[t]][df_pifu_holding$date == start_date]
-  }
-  
-  #initial UNACTIVATED PIFUs
-  for (ps in pifu_statuses) {
-    pt <- statuses$status_short_name[statuses$status == ps]
-    pt_u <- paste0(pt,".UnactivatedThisMonth")
-    df_waiters[[pt_u]][df_waiters$date == start_date] <- sum(df_pifu_holding[[pt]][-(1:1)])
-  }
-  
-  rm(s,t)
 
+  ##########################################################################
+  ## Set up initial state - Generate a distribution of outstanding PIFUs ###
+  ##########################################################################
   
+  df_waiters <- initialise_pifus(df_waiters)
+
   ##########################################################################
   ## Execute model for as many months as we've got capacity and referrals ##
   ##########################################################################
