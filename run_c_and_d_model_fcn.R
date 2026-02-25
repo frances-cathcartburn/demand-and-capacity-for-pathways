@@ -118,6 +118,7 @@ run_c_and_d_model <- function(wd = getwd()
     ,event_outcome
     ,event_group
     ,pifu_percentages
+    ,booking_rate
     ,output_suffix
     )
   
