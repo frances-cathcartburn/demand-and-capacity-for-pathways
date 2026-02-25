@@ -10,7 +10,7 @@ generate_output_suffix <- function () {
 }
 
 generate_capacity <- function() {
-  #if there are the same number of events as event groups, no fiddling needed
+  #if there are the same number of events as event groups, no manipulation needed
   #if there aren't the same number of events as event groups, allow virtually
     #unlimited number of pifus, and for all other events start with 
     #placeholder capacity columns where all values are set to zero, so that 
@@ -30,7 +30,6 @@ generate_capacity <- function() {
         }
       } else {
         evs <- event_group$event[event_group$eventgroup == eg]
-        #initialise a column
         for (ev in evs) {
           col_name <- paste("Capacity.",events$event_short_name[events$event == ev],sep='')
           capacity[[col_name]] <- rep(0,length(capacity$date))

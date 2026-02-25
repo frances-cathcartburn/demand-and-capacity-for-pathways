@@ -47,6 +47,9 @@ run_c_and_d_model <- function(wd = getwd()
   if (file.exists("model_pifu_percentages.csv")) {
     model_pifu_percentages_raw <- read.csv("model_pifu_percentages.csv")
   }
+  if (file.exists("model_booking_rate.csv")) {
+    model_booking_rate_raw <- read.csv("model_booking_rate.csv")
+  }
   
   ##########################################################################
   ## Process data tables - Model - Mandatory files #########################
@@ -91,6 +94,17 @@ run_c_and_d_model <- function(wd = getwd()
     pifu_percentages <- data.frame(c(1:12),c(0.02,0.02,0.02,0.03,0.06,0.07,0.09,0.13,0.16,0.18,0.16,0.06))
   }
   names(pifu_percentages) <- c("n_months","proportion")
+  
+  #Booking rate
+  booking_rate <- data.frame(unique(event_group$eventgroup),rep(1,length(unique(event_group$eventgroup))))
+  names(booking_rate) <- c("eventgroup","rate")
+  if (exists("model_booking_rate_raw")) {
+    booking_rate_temp <- model_booking_rate_raw
+    names(booking_rate_temp) <- c("eventgroup","rate")
+    for (eg in booking_rate_temp$eventgroup) {
+      booking_rate$rate[booking_rate$eventgroup == eg] <- booking_rate_temp$rate[booking_rate_temp$eventgroup == eg]
+    }
+  }
   
   ##########################################################################
   ## Error Checks - Model Inputs ###########################################
@@ -159,12 +173,15 @@ run_c_and_d_model <- function(wd = getwd()
   demand_initial       <- rbind(demand_initial,new_demand_df)
   
   distinct_eventgroups <- unique(event_group$eventgroup)
-  dna_rate             <- 0.03
   
-  for (c in names(capacity_temp)[names(capacity_temp) != "date"]){
-    capacity_temp[[c]] <- capacity_temp[[c]]*(1-dna_rate)
+  dna_rate                                            <- 0.03
+  booking_rate_and_dna                                <- data.frame(booking_rate$eventgroup,booking_rate$rate*(1-dna_rate))
+  names(booking_rate_and_dna)                         <- c("eventgroup","rate")
+  booking_rate_and_dna$eventgroup_short_name_capacity <-  paste("Capacity.",make.names(booking_rate_and_dna$eventgroup),sep='')
+  for (c in names(capacity_temp)[names(capacity_temp) != "date" & names(capacity_temp) != "PIFU.activated"]){ 
+    rate_for_c <- booking_rate_and_dna$rate[booking_rate_and_dna$eventgroup_short_name_capacity == c]
+    capacity_temp[[c]] <- capacity_temp[[c]]*rate_for_c
   }
-  
   capacity <- generate_capacity()
   
   ##########################################################################
