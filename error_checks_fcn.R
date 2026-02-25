@@ -10,6 +10,7 @@ error_checks_model_config_files <- function(
     ,event_outcome
     ,event_group
     ,pifu_percentages
+    ,booking_rate
     ,output_suffix
   ) {
   
@@ -112,6 +113,22 @@ error_checks_model_config_files <- function(
     msg <- "Error - The PIFU distribution proportions don't add up to 1"
     errors_model <- c(errors_model,msg)
   }
+  
+  if ( sum(booking_rate$rate < 0) != 0 ) {
+    msg <- "Error - The booking_rate table contains at least one rate that is negative (invalid)!"
+    errors_model <- c(errors_model,msg)
+  }
+    
+  if ( sum(booking_rate$rate > 1) != 0 ) {
+    msg <- "Error - The booking_rate table contains at least one rate that is greater than 1 (invalid)!"
+    errors_model <- c(errors_model,msg)
+  }
+  
+  #booking_rate_temp does not always exist so cannot use this test
+  # if ( prod(booking_rate_temp$eventgroup %in% event_group$eventgroup) != 1 ) {
+  #   msg <- "Error - The booking_rate table contains at least one event/event group that isn't in the event/event group table!"
+  #   errors_model <- c(errors_model,msg)
+  # }
   
   if (length(errors_model)>=1){
     write.csv(errors_model,paste(wd,"/out/errors_model_",output_suffix,".csv",sep=""), row.names = FALSE)
