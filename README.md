@@ -4,7 +4,7 @@ If a pathway can be mapped as a flow diagram with known proportions for the outc
 
 ## Example 1
 
-This example is an introduction of the ideas behind the model, and the six essential configuration files. It's recommended that new users look at the folder example_1 to see what these config files should look like. For detailed technical documentation including optional extra features, please see full documentation (coming soon!).
+This example is an introduction of the ideas behind the model, and the six essential configuration files. It's recommended that new users look at the folder example_1 to see what these config files should look like. For detailed technical documentation including optional extra features, please see Technical Documentation.docx.
 
 ### Example 1 - The Model
 The diagram below shows a fictional pathway that can be modelled.
